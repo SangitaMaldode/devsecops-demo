@@ -1,148 +1,417 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, Award } from 'lucide-react';
 import Board from './components/Board';
 import ScoreBoard from './components/ScoreBoard';
 import GameHistory from './components/GameHistory';
 import { calculateWinner, checkDraw } from './utils/gameLogic';
 
-function App() {
-  // Game state
-  const [board, setBoard] = useState(Array(9).fill(null));
-  const [xIsNext, setXIsNext] = useState(true);
-  const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
-  const [gameHistory, setGameHistory] = useState<Array<{
-    winner: string | null;
-    board: Array<string | null>;
-    date: Date;
-  }>>([]);
-  const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'draw'>('playing');
-  const [winningLine, setWinningLine] = useState<number[] | null>(null);
+interface GameRecord {
+  winner: string | null;
+  board: Array<string | null>;
+  date: string;
+}
 
-  // Check for winner or draw
+function App() {
+
+  const PLAYER_X = "Sangita";
+  const PLAYER_O = "Priya";
+
+
+  const [board, setBoard] = useState<Array<string | null>>(
+    Array(9).fill(null)
+  );
+
+  const [xIsNext, setXIsNext] = useState(true);
+
+
+  const [scores, setScores] = useState({
+    X: 0,
+    O: 0,
+    draws: 0
+  });
+
+
+  // Load history from localStorage
+  const [gameHistory, setGameHistory] = useState<GameRecord[]>(() => {
+
+    const saved =
+      localStorage.getItem("ticTacToeHistory");
+
+    return saved
+      ? JSON.parse(saved)
+      : [];
+
+  });
+
+
+  const [gameStatus, setGameStatus] =
+    useState<'playing' | 'won' | 'draw'>('playing');
+
+
+  const [winningLine, setWinningLine] =
+    useState<number[] | null>(null);
+
+
+  // Prevent duplicate history
+  const gameFinished = useRef(false);
+
+
+
+  // Save history whenever it changes
   useEffect(() => {
-    const result = calculateWinner(board);
-    
-    if (result) {
-      setGameStatus('won');
-      setWinningLine(result.line);
-      
-      // Update scores
-      setScores(prevScores => ({
-        ...prevScores,
-        [result.winner]: prevScores[result.winner as keyof typeof prevScores] + 1
-      }));
-      
-      // Add to history
-      setGameHistory(prev => [
-        ...prev, 
-        { winner: result.winner, board: [...board], date: new Date() }
-      ]);
-    } else if (checkDraw(board)) {
-      setGameStatus('draw');
-      
-      // Update draw count
-      setScores(prevScores => ({
-        ...prevScores,
-        draws: prevScores.draws + 1
-      }));
-      
-      // Add to history
-      setGameHistory(prev => [
-        ...prev, 
-        { winner: null, board: [...board], date: new Date() }
-      ]);
+
+    localStorage.setItem(
+      "ticTacToeHistory",
+      JSON.stringify(gameHistory)
+    );
+
+  }, [gameHistory]);
+
+
+
+
+
+  // Check winner/draw
+  useEffect(() => {
+
+
+    if (gameFinished.current) {
+      return;
     }
+
+
+    const result = calculateWinner(board);
+
+
+
+    if (result) {
+
+
+      gameFinished.current = true;
+
+
+      setGameStatus('won');
+
+      setWinningLine(result.line);
+
+
+
+      setScores(prev => ({
+        ...prev,
+        [result.winner]:
+          prev[result.winner as keyof typeof prev] + 1
+      }));
+
+
+
+      setGameHistory(prev => [
+        ...prev,
+        {
+          winner: result.winner,
+          board: [...board],
+          date: new Date().toISOString()
+        }
+      ]);
+
+
+
+    }
+    else if (checkDraw(board)) {
+
+
+      gameFinished.current = true;
+
+
+      setGameStatus('draw');
+
+
+
+      setScores(prev => ({
+        ...prev,
+        draws: prev.draws + 1
+      }));
+
+
+
+      setGameHistory(prev => [
+        ...prev,
+        {
+          winner: null,
+          board: [...board],
+          date: new Date().toISOString()
+        }
+      ]);
+
+    }
+
+
+
   }, [board]);
 
-  // Handle square click
-  const handleClick = (index: number) => {
-    // Return if square is filled or game is over
-    if (board[index] || gameStatus !== 'playing') return;
-    
-    const newBoard = [...board];
-    newBoard[index] = xIsNext ? 'X' : 'O';
-    
-    setBoard(newBoard);
-    setXIsNext(!xIsNext);
-  };
 
-  // Reset the game
-  const resetGame = () => {
-    setBoard(Array(9).fill(null));
-    setXIsNext(true);
-    setGameStatus('playing');
-    setWinningLine(null);
-  };
 
-  // Reset all stats
-  const resetStats = () => {
-    resetGame();
-    setScores({ X: 0, O: 0, draws: 0 });
-    setGameHistory([]);
-  };
 
-  // Get current game status message
-  const getStatusMessage = () => {
-    if (gameStatus === 'won') {
-      const winner = !xIsNext ? 'X' : 'O';
-      return `Player ${winner} wins!`;
-    } else if (gameStatus === 'draw') {
-      return "It's a draw!";
-    } else {
-      return `Next player: ${xIsNext ? 'X' : 'O'}`;
+
+  const handleClick = (index:number) => {
+
+
+    if (
+      board[index] ||
+      gameStatus !== 'playing'
+    ) {
+      return;
     }
+
+
+
+    const newBoard = [...board];
+
+
+    newBoard[index] =
+      xIsNext ? "X" : "O";
+
+
+
+    setBoard(newBoard);
+
+
+    setXIsNext(!xIsNext);
+
   };
+
+
+
+
+
+  const resetGame = () => {
+
+
+    setBoard(
+      Array(9).fill(null)
+    );
+
+
+    setXIsNext(true);
+
+
+    setGameStatus('playing');
+
+
+    setWinningLine(null);
+
+
+    gameFinished.current = false;
+
+  };
+
+
+
+
+
+  const resetStats = () => {
+
+
+    resetGame();
+
+
+
+    setScores({
+      X:0,
+      O:0,
+      draws:0
+    });
+
+
+
+    setGameHistory([]);
+
+
+
+    localStorage.removeItem(
+      "ticTacToeHistory"
+    );
+
+  };
+
+
+
+
+
+  const getStatusMessage = () => {
+
+
+    if(gameStatus === "won") {
+
+
+      const winner =
+        !xIsNext ? "X" : "O";
+
+
+      const name =
+        winner === "X"
+          ? PLAYER_X
+          : PLAYER_O;
+
+
+
+      return `🏆 ${name} Wins!`;
+
+    }
+
+
+
+    if(gameStatus === "draw") {
+
+      return "🤝 Match Draw";
+
+    }
+
+
+
+    return `🎮 Next Player: ${
+      xIsNext
+        ? PLAYER_X
+        : PLAYER_O
+    }`;
+
+  };
+
+
+
+
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 flex flex-col items-center justify-center p-4">
-      <div className="max-w-4xl w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="p-6 bg-indigo-600 text-white text-center">
-          <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
-            <Award className="h-8 w-8" />
-            Tic Tac Toe
-          </h1>
-          <p className="text-indigo-200 mt-1">A classic game reimagined</p>
-        </div>
-        
-        <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Game section */}
-          <div className="md:col-span-2 flex flex-col items-center">
-            <div className="mb-4 text-center">
-              <h2 className="text-xl font-semibold text-indigo-800">{getStatusMessage()}</h2>
+
+    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+
+
+      <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl" />
+
+      <div className="absolute top-1/3 -right-32 h-96 w-96 rounded-full bg-purple-600/20 blur-3xl" />
+
+      <div className="absolute bottom-0 left-1/3 h-96 w-96 rounded-full bg-pink-500/20 blur-3xl" />
+
+
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center p-6">
+
+
+        <div className="w-full max-w-7xl overflow-hidden rounded-3xl border border-white/10 bg-white/10 backdrop-blur-xl shadow-2xl">
+
+
+          <div className="border-b border-white/10 bg-gradient-to-r from-cyan-600/30 via-indigo-600/30 to-purple-600/30 p-8">
+
+
+            <div className="flex flex-col items-center">
+
+
+              <Award className="mb-5 h-12 w-12 text-yellow-400"/>
+
+
+              <h1 className="text-5xl font-extrabold text-white">
+                TIC TAC TOE
+              </h1>
+
+
+              <p className="mt-3 text-slate-300">
+                Modern React + TypeScript Edition
+              </p>
+
+
             </div>
-            
-            <Board 
-              squares={board} 
-              onClick={handleClick} 
-              winningLine={winningLine}
-            />
-            
-            <div className="mt-6 flex gap-4">
-              <button 
-                onClick={resetGame}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                New Game
-              </button>
-              <button 
-                onClick={resetStats}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors"
-              >
-                Reset All
-              </button>
+
+
+          </div>
+
+
+
+
+
+          <div className="grid gap-10 p-8 lg:grid-cols-3">
+
+
+            <div className="flex flex-col items-center lg:col-span-2">
+
+
+              <div className="mb-8 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-6 py-3">
+
+                <h2 className="text-2xl font-bold text-cyan-300">
+                  {getStatusMessage()}
+                </h2>
+
+              </div>
+
+
+
+              <Board
+                squares={board}
+                onClick={handleClick}
+                winningLine={winningLine}
+              />
+
+
+
+              <div className="mt-10 flex gap-5">
+
+
+                <button
+                  onClick={resetGame}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 px-8 py-3 font-semibold text-white"
+                >
+
+                  <RefreshCw className="h-5 w-5"/>
+
+                  New Game
+
+                </button>
+
+
+
+                <button
+                  onClick={resetStats}
+                  className="rounded-xl bg-white/10 px-8 py-3 font-semibold text-white"
+                >
+
+                  Reset Statistics
+
+                </button>
+
+
+              </div>
+
+
             </div>
+
+
+
+
+
+            <div className="flex flex-col gap-6">
+
+
+              <ScoreBoard scores={scores}/>
+
+
+              <GameHistory history={gameHistory}/>
+
+
+            </div>
+
+
           </div>
-          
-          {/* Stats section */}
-          <div className="flex flex-col gap-6">
-            <ScoreBoard scores={scores} />
-            <GameHistory history={gameHistory} />
-          </div>
+
+
         </div>
+
+
       </div>
+
+
     </div>
+
   );
+
 }
+
 
 export default App;
