@@ -129,7 +129,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({ history }) => {
 
                       {game.winner
                         ? `🏆 ${getWinnerName(game.winner)} Wins!`
-                        : "🤝 Match Draw"}
+                        : "🤝 Match Drawn."}
 
                     </span>
 
